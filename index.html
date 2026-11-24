@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alibi — The Excuse Generator</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js"></script>
+<style>
+:root{color-scheme:light dark;--bg:#f6f4ef;--card:#fff;--ink:#16162a;--mute:#6b6b82;--line:#e6e3dc;--acc:#6d4aff;--coral:#ff6b5e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1220;--card:#181c30;--ink:#f3f1ea;--mute:#9a9db5;--line:#2a2f4a;--acc:#8b7bff}}
+:root[data-theme="dark"]{--bg:#0f1220;--card:#181c30;--ink:#f3f1ea;--mute:#9a9db5;--line:#2a2f4a;--acc:#8b7bff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh;
+background-image:radial-gradient(60% 40% at 10% 0%,rgba(109,74,255,.22),transparent),radial-gradient(50% 35% at 100% 10%,rgba(255,107,94,.16),transparent)}
+.card{background:var(--card);border:1px solid var(--line)}
+.pill{border:1.5px solid var(--line);background:transparent;color:var(--ink);padding:.5rem .85rem;border-radius:9999px;font-size:.85rem;font-weight:600;transition:all .15s;cursor:pointer}
+.pill:hover{border-color:var(--acc)}
+.pill.on{background:var(--acc);border-color:var(--acc);color:#fff;transform:scale(1.04);box-shadow:0 6px 18px -6px var(--acc)}
+.lbl{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;border-radius:1rem;font-weight:700;font-size:.85rem;padding:.7rem .9rem;border:1.5px solid var(--line);color:var(--ink);background:transparent;cursor:pointer;transition:transform .12s}
+.btn:active{transform:scale(.96)}
+input[type=range]{width:100%;accent-color:var(--coral)}
+@keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
+.pop{animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+@keyframes spin{to{transform:rotate(360deg)}}.spin{animation:spin .8s linear infinite}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const h=React.createElement,{useState,useEffect,useRef}=React,html=htm.bind(h);
+const Icon=({n,s=18})=>{const L=window.lucide,d=L&&L.icons&&L.icons[n];if(!d)return null;const k=Array.isArray(d[0])?d:(d[2]||[]);
+return h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":true},k.map((x,i)=>h(x[0],{...x[1],key:i})))};
+const R=a=>a[Math.floor(Math.random()*a.length)];
+
+const SCEN=[{id:"assignment",e:"📚",l:"Late Assignment"},{id:"meeting",e:"💼",l:"Missing a Meeting"},{id:"delivery",e:"📦",l:"Late Delivery"},{id:"social",e:"🥂",l:"Social Cancellation"}];
+const WHO=[{id:"boss",l:"Boss / Manager",w:1,f:"Dear Manager,",c:"Hey boss,",m:0},{id:"prof",l:"Professor / Teacher",w:1,f:"Dear Professor,",c:"Hi Professor,",m:-2},{id:"client",l:"Client / Customer",w:1,f:"Dear valued client,",c:"Hi there,",m:2},{id:"friend",l:"Close Friend",w:0,f:"Hey,",c:"Hey,",m:-4},{id:"parent",l:"Strict Parent / Partner",w:0,f:"Hi,",c:"Hey,",m:-7}];
+const TONE=[{id:"formal",l:"Formal & Professional",b:5},{id:"casual",l:"Casual & Chill",b:2},{id:"dramatic",l:"Dramatic & Apologetic",b:-3},{id:"unhinged",l:"Unhinged / Funny",b:-10}];
+const LV=[{e:"🙂",l:"Mild / Everyday"},{e:"😬",l:"Moderately Serious"},{e:"🚨",l:"Emergency / Unquestionable"}];
+
+const CAUSE={
+assignment:[
+["my laptop installed a surprise update and ate my last hour on {t}","the campus Wi-Fi dropped right as I hit upload on {t}","my files for {t} synced to the wrong folder and I only just found them","my printer and I have been in a standoff over {t} all evening"],
+["my cloud drive corrupted the draft of {t} and I had to rebuild a big chunk","I came down with a migraine that wiped out the whole day I'd set aside for {t}","a power cut hit my building mid-draft and cost me hours on {t}","my laptop crashed and the repair shop only just returned it, with {t} on it"],
+["a family member was rushed to the hospital and I've been with them since, so {t} slipped","a burst pipe flooded my flat and I lost my laptop and notes for {t}","I had a medical emergency and was in urgent care when {t} was due","I've been dealing with an unexpected family emergency and couldn't get to {t}"]],
+meeting:[
+["my train got stuck outside the station and I missed {t}","my calendar sync glitched and {t} never showed up for me","a delivery driver blocked my driveway right before {t}","my headset died and I couldn't get back in for {t}"],
+["I got hit by a sudden stomach bug right before {t}","my internet went down across the whole neighborhood during {t}","my car wouldn't start and the cab took forever to reach me for {t}","I was stuck at the clinic with a sudden fever and lost track of {t}"],
+["I had a family emergency and rushed to the hospital just before {t}","there was an accident on my road and I was stuck for hours, missing {t}","a close relative collapsed and I had to be with them during {t}","an urgent medical situation took over my morning and {t} was out of my hands"]],
+delivery:[
+["the courier's route got reshuffled and {t} fell to the next batch","a sorting hub scan error parked {t} in the wrong city for a day","heavy traffic on the highway held up the truck carrying {t}","the packaging for {t} failed inspection and was redone"],
+["a warehouse system outage froze every outbound shipment including {t}","our delivery partner had a vehicle breakdown with {t} on board","a customs hold slowed {t} at the last checkpoint","a flooded road forced the driver to detour with {t}"],
+["a serious accident closed the main road and the van with {t} was stuck for hours","our dispatcher had a medical emergency, which froze the schedule for {t}","severe weather shut the regional hub and {t} couldn't move","a fire alarm evacuated our warehouse right as {t} was being loaded"]],
+social:[
+["I'm completely out of battery, social and otherwise, and can't make {t}","my plans double-booked and I only just noticed {t} overlaps","I've got a sudden pounding headache and can't be around people for {t}","my ride fell through and I can't get to {t}"],
+["I came down with something nasty and shouldn't be near anyone at {t}","my phone died and I only just saw the plan for {t}","my landlord scheduled urgent repairs that need me home during {t}","I'm stuck handling a work crisis that ate the evening meant for {t}"],
+["a family emergency came up and I need to be there, so I can't do {t}","I had to rush a relative to the doctor and can't make {t}","a pipe burst at home and I'm dealing with the damage instead of {t}","I'm unwell enough that the doctor told me to rest, so {t} is off for me"]]};
+const FIX={
+assignment:{w:["I can send the finished work by tonight if you're able to grant a short extension.","I'll submit within 24 hours and happily accept any penalty you think fair.","I'll deliver a polished version first thing tomorrow."],p:["I'll fix it and send you the finished thing tonight.","I'm on it right now, give me a few hours."]},
+meeting:{w:["I've read the notes and can catch up on action items today.","I can jump on a quick call this afternoon to cover what I missed.","I'll send you my updates in writing within the hour."],p:["I'll make it up to you, my treat next time.","I'm free later if you want to fill me in."]},
+delivery:{w:["We're expediting it and will share a tracking update within a few hours.","We'll cover the delay with a discount on your next order.","We've escalated this and will confirm a new delivery slot shortly."],p:["It's on its way and I'll send you the tracking link.","I'll sort it out and update you tonight."]},
+social:{w:["I'd love to reschedule, I'll send a few new dates.","I'll make it up to everyone on the next one."],p:["I'll make it up to you, next round is on me.","Let's reschedule this weekend, I promise."]}};
+const TIPS={assignment:["Pro-tip: don't post on socials for the next 4 hours.","Keep your story simple, details are where excuses die.","Attach the work with the apology to seem honest."],meeting:["Pro-tip: keep your status 'away' until the evening.","Join the next meeting 5 minutes early to rebuild trust.","Never mention the exact time you woke up."],delivery:["Pro-tip: send a tracking link before they ask.","Offer a small gesture, it turns anger into goodwill.","Reply fast, silence reads as guilt."],social:["Pro-tip: no location tags for 24 hours.","Offer a new date right away so it sounds sincere.","Avoid group chats until the plan has passed."]};
+const LTIP=[["Don't over-explain, short excuses age better."],["Stay consistent if anyone asks twice."],["Skip the cheerful emoji for a day or so, it sells the mood."]];
+const TN={formal:{o:["I'm writing to apologize regarding {T}.","Please accept my sincere apologies regarding {T}."],c:["Unfortunately, ","Regrettably, "],x:"Thank you for your understanding."},
+casual:{o:["Quick heads up on {T} -","Hey, so about {T}:"],c:["basically ","so "],x:"Thanks for being cool about it 🙏"},
+dramatic:{o:["I am absolutely mortified about {T}.","I can't begin to express how sorry I am about {T}."],c:["The truth is that ","Sadly, "],x:"Please forgive me. I will make this right. 💔"},
+unhinged:{o:["Breaking news regarding {T}:","I have a statement about {T}. Please sit down."],c:["What happened: ","In my defense, "],x:"Anyway. Respect the chaos. 🫡",g:[" Also, a goose got involved."," I have since filed a complaint with the universe."," No further questions at this time."," The raccoon union has been notified."]}};
+const THINGS=["standup","meeting","presentation","call","report","essay","assignment","paper","project","homework","package","order","delivery","shipment","dinner","party","brunch","wedding","birthday","game night","trip","interview","exam","lab"];
+const DEFT={assignment:"assignment",meeting:"meeting",delivery:"delivery",social:"plans"};
+const SEEDS=[["meeting","Missed my 9 AM standup because I overslept"],["assignment","Forgot to send the client package"],["social","Can't go to Riya's birthday dinner, I'd rather nap"],["delivery","Our order got stuck at the warehouse"],["assignment","Didn't start my essay until last night"],["meeting","Skipped the 3 PM review call"],["social","Not feeling the group trip this weekend"],["delivery","Shipment is three days late and nobody told the customer"]];
+
+function build({sc,detail,who,tone,lv}){
+const d=detail.toLowerCase(),tm=(detail.match(/\b\d{1,2}(:\d\d)?\s?(am|pm)\b/i)||[""])[0].toUpperCase();
+const th=THINGS.find(w=>d.includes(w))||DEFT[sc],T="the "+(tm?tm+" ":"")+th;
+const W=WHO.find(x=>x.id===who),Tn=TN[tone],cause=R(CAUSE[sc][lv-1]).replace("{t}",T);
+const conn=R(Tn.c),fix=R(FIX[sc][W.w?"w":"p"]);
+const body=R(Tn.o).replace("{T}",T)+" "+conn+cause+"."+(Tn.g?R(Tn.g):"")+" "+fix;
+const text=(tone==="formal"?W.f:W.c)+"\n\n"+body+"\n\n"+Tn.x;
+const tone_b=TONE.find(x=>x.id===tone).b;
+const score=Math.max(41,Math.min(99,Math.round(60+lv*9+tone_b+W.m+Math.random()*7)));
+const tip=Math.random()<.7?R(TIPS[sc]):R(LTIP[lv-1]);
+return {text,score,tip,sc}}
+
+const save=h2=>{try{localStorage.setItem("alibi-history",JSON.stringify(h2))}catch(e){}};
+const load=()=>{try{return JSON.parse(localStorage.getItem("alibi-history"))||[]}catch(e){return[]}};
+const MSGS=["Crafting alibi...","Checking believability...","Removing suspicious details...","Polishing the sad face..."];
+
+function App(){
+const[sc,setSc]=useState("meeting"),[detail,setDetail]=useState(""),[who,setWho]=useState("boss"),[tone,setTone]=useState("casual"),[lv,setLv]=useState(2);
+const[res,setRes]=useState(null),[busy,setBusy]=useState(false),[msg,setMsg]=useState(MSGS[0]),[copied,setCopied]=useState(""),[open,setOpen]=useState(false),[hist,setHist]=useState([]);
+const timer=useRef(null);
+useEffect(()=>{setHist(load())},[]);
+const run=(over)=>{if(busy)return;const p={sc,detail,who,tone,lv,...(over||{})};setBusy(true);let i=0;setMsg(MSGS[0]);
+const iv=setInterval(()=>{i=(i+1)%MSGS.length;setMsg(MSGS[i])},650);
+timer.current=setTimeout(()=>{clearInterval(iv);const r=build(p);setRes(r);setBusy(false);
+const next=[{id:Date.now(),text:r.text,score:r.score,sc:r.sc},...hist].slice(0,5);setHist(next);save(next)},1900)};
+const dice=()=>{const s=R(SEEDS);setSc(s[0]);setDetail(s[1])};
+const copy=(t,k)=>{const done=()=>{setCopied(k);setTimeout(()=>setCopied(""),1600)};
+try{navigator.clipboard.writeText(t).then(done,()=>{fb()})}catch(e){fb()}
+function fb(){try{const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();done()}catch(e){}}};
+const go=u=>window.open(u,"_blank","noopener");
+const wa=()=>go("https://wa.me/?text="+encodeURIComponent(res.text));
+const share=()=>{const t=res.text.replace(/\n+/g," ").slice(0,240)+" #AlibiApp";
+if(navigator.share){navigator.share({text:t}).catch(()=>{})}else go("https://twitter.com/intent/tweet?text="+encodeURIComponent(t))};
+const Pills=({items,val,set})=>html`<div className="flex flex-wrap gap-2">${items.map(x=>html`<button key=${x.id} className=${"pill"+(val===x.id?" on":"")} onClick=${()=>set(x.id)}>${x.e?x.e+" ":""}${x.l}</button>`)}</div>`;
+const sec=(t,c)=>html`<div className="space-y-2"><div className="lbl">${t}</div>${c}</div>`;
+const sl=SCEN.find(x=>x.id===(res&&res.sc));
+return html`<main className="mx-auto w-full max-w-md md:max-w-xl px-4 py-6 md:py-12">
+<header className="mb-5 text-center">
+<div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold text-white" style=${{background:"var(--coral)"}}><${Icon} n="Sparkles" s=${13}/> Excuses, but make them believable</div>
+<h1 className="mt-3 text-4xl md:text-5xl font-black tracking-tight">Ali<span style=${{color:"var(--acc)"}}>bi</span>.</h1>
+<p className="mt-1 text-sm" style=${{color:"var(--mute)"}}>Tell us what went wrong. We’ll tell you what to say.</p>
+</header>
+<section className="card rounded-2xl p-5 space-y-5 shadow-xl">
+${sec("1 · What happened?",html`<${Pills} items=${SCEN} val=${sc} set=${setSc}/>
+<div className="flex gap-2 items-start"><textarea rows="2" value=${detail} onChange=${e=>setDetail(e.target.value)} placeholder="e.g. Missed my 9 AM standup because I overslept" className="flex-1 rounded-2xl px-3 py-2.5 text-sm outline-none resize-none" style=${{background:"transparent",border:"1.5px solid var(--line)",color:"var(--ink)"}}></textarea>
+<button className="btn" title="Randomize situation" aria-label="Randomize situation" onClick=${dice} style=${{height:"3.1rem"}}><${Icon} n="Dices" s=${20}/></button></div>`)}
+${sec("2 · Who are you telling?",html`<${Pills} items=${WHO} val=${who} set=${setWho}/>`)}
+${sec("3 · Pick your tone",html`<${Pills} items=${TONE} val=${tone} set=${setTone}/>`)}
+${sec("4 · How serious should it sound?",html`<input type="range" min="1" max="3" step="1" value=${lv} onChange=${e=>setLv(+e.target.value)} aria-label="Seriousness"/>
+<div className="flex justify-between items-center text-sm font-bold"><span style=${{color:"var(--mute)"}}>1 · Mild</span><span className="pop rounded-full px-3 py-1 text-white" key=${lv} style=${{background:"var(--acc)"}}>${LV[lv-1].e} ${LV[lv-1].l}</span><span style=${{color:"var(--mute)"}}>3 · Emergency</span></div>`)}
+<button disabled=${busy} onClick=${()=>run()} className="w-full rounded-2xl py-4 text-lg font-black text-white transition active:scale-95" style=${{background:"linear-gradient(135deg,#6d4aff,#4f46e5 60%,#ff6b5e)",boxShadow:"0 12px 28px -10px #6d4aff"}}>
+${busy?html`<span className="inline-flex items-center gap-2"><span className="spin inline-flex"><${Icon} n="RefreshCw" s=${18}/></span>${msg}</span>`:"Generate Excuse ✨"}</button>
+</section>
+${res&&!busy&&html`<section key=${res.text} className="pop mt-5 rounded-2xl p-[2px]" style=${{background:"linear-gradient(135deg,#6d4aff,#ff6b5e)"}}>
+<div className="card rounded-2xl p-5 space-y-4" style=${{border:"none"}}>
+<div className="flex items-center justify-between"><span className="lbl">${sl?sl.e+" "+sl.l:""}</span>
+<span className="rounded-full px-3 py-1 text-sm font-black text-white" style=${{background:res.score>=85?"#10b981":res.score>=70?"var(--coral)":"#f59e0b"}}>${res.score}% Believable</span></div>
+<p className="whitespace-pre-line text-[15px] leading-relaxed font-medium">${res.text}</p>
+<div className="rounded-2xl px-3 py-2.5 text-sm" style=${{background:"rgba(109,74,255,.12)"}}>💡 <b>Follow-up tip:</b> ${res.tip}</div>
+<div className="grid grid-cols-2 gap-2">
+<button className="btn" onClick=${()=>copy(res.text,"main")} style=${copied==="main"?{background:"#10b981",color:"#fff",borderColor:"#10b981"}:{}}><${Icon} n=${copied==="main"?"Check":"Copy"} s=${16}/>${copied==="main"?"Copied!":"Copy"}</button>
+<button className="btn" onClick=${wa} style=${{background:"#25d366",color:"#06280f",borderColor:"#25d366"}}><${Icon} n="Send" s=${16}/>WhatsApp</button>
+<button className="btn" onClick=${share}><${Icon} n="Share2" s=${16}/>Share / Tweet</button>
+<button className="btn" onClick=${()=>run()} style=${{background:"var(--coral)",color:"#fff",borderColor:"var(--coral)"}}><${Icon} n="RefreshCw" s=${16}/>Remix</button>
+</div></div></section>`}
+<section className="card rounded-2xl mt-5 overflow-hidden">
+<button className="w-full flex items-center justify-between px-5 py-4 font-bold" onClick=${()=>setOpen(!open)} aria-expanded=${open} style=${{background:"transparent",color:"var(--ink)",border:"none",cursor:"pointer"}}>
+<span className="inline-flex items-center gap-2"><${Icon} n="History" s=${18}/> Recent excuses <span className="text-xs rounded-full px-2 py-0.5 text-white" style=${{background:"var(--acc)"}}>${hist.length}</span></span>
+<span style=${{transform:open?"rotate(180deg)":"none",transition:"transform .2s"}}><${Icon} n="ChevronDown" s=${18}/></span></button>
+${open&&html`<div className="px-5 pb-5 space-y-3">${hist.length===0?html`<p className="text-sm" style=${{color:"var(--mute)"}}>Nothing yet. Your alibis will show up here.</p>`:hist.map(x=>html`<div key=${x.id} className="rounded-2xl p-3 text-sm" style=${{border:"1.5px solid var(--line)"}}>
+<div className="flex justify-between mb-1.5"><span className="lbl">${(SCEN.find(s=>s.id===x.sc)||{}).e} ${x.score}% believable</span>
+<button className="inline-flex items-center gap-1 text-xs font-bold" onClick=${()=>copy(x.text,x.id)} style=${{background:"transparent",border:"none",color:"var(--acc)",cursor:"pointer"}}><${Icon} n=${copied===x.id?"Check":"Copy"} s=${13}/>${copied===x.id?"Copied!":"Copy"}</button></div>
+<p className="whitespace-pre-line line-clamp-4" onClick=${()=>setRes({text:x.text,score:x.score,sc:x.sc,tip:R(TIPS[x.sc])})} style=${{cursor:"pointer"}}>${x.text}</p></div>`)}</div>`}
+</section>
+<p className="mt-6 text-center text-xs" style=${{color:"var(--mute)"}}>For fun and creative writing. Honesty is still the best policy. 😇</p>
+</main>`}
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+</script>
+</body>
+</html>
